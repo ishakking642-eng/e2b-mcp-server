@@ -1,42 +1,45 @@
 import os
 from mcp.server.fastmcp import FastMCP
-from e2b_code_interpreter import Sandbox
+from daytona import Daytona, DaytonaConfig
 
-E2B_KEY = os.environ.get("E2B_API_KEY")
+DAYTONA_KEY = os.environ.get("DAYTONA_API_KEY")
 PORT = int(os.environ.get("PORT", 10000))
 
-mcp = FastMCP("E2B Cloud Sandbox", host="0.0.0.0", port=PORT)
+mcp = FastMCP("Daytona Cloud Sandbox", host="0.0.0.0", port=PORT)
+
+def get_daytona_client():
+    if not DAYTONA_KEY:
+        raise ValueError("خطأ: مفتاح DAYTONA_API_KEY غير محدد في متغيرات البيئة.")
+    config = DaytonaConfig(api_key=DAYTONA_KEY)
+    return Daytona(config)
 
 @mcp.tool()
 def execute_python_code(code: str) -> str:
-    """تشغيل كود Python داخل بيئة لينكس سحابية معزولة."""
-    if not E2B_KEY:
-        return "خطأ: مفتاح E2B_API_KEY غير محدد في متغيرات البيئة."
-    
-    os.environ["E2B_API_KEY"] = E2B_KEY
+    """تشغيل كود Python داخل بيئة Daytona السحابية المعزولة."""
     try:
-        # استخدام Sandbox.create() لإنشاء الجلسة بشكل صحيح
-        with Sandbox.create(api_key=E2B_KEY) as sandbox:
-            execution = sandbox.run_code(code)
-            return execution.text if execution.text else "تم التنفيذ بنجاح."
+        daytona = get_daytona_client()
+        sandbox = daytona.create()
+        response = sandbox.process.code_run(code)
+        
+        if response.exit_code != 0:
+            return f"خطأ أثناء التنفيذ (Exit Code {response.exit_code}): {response.result}"
+        return response.result if response.result else "تم تنفيذ كود Python بنجاح."
     except Exception as e:
         return f"حدث خطأ أثناء تشغيل البيئة السحابية: {str(e)}"
 
 @mcp.tool()
 def execute_shell_command(command: str) -> str:
-    """تنفيذ أمر Terminal (Bash) في البيئة السحابية لبناء وتثبيت المشاريع."""
-    if not E2B_KEY:
-        return "خطأ: مفتاح E2B_API_KEY غير محدد في متغيرات البيئة."
-    
-    os.environ["E2B_API_KEY"] = E2B_KEY
+    """تنفيذ أمر Terminal (Bash) في بيئة Daytona السحابية لبناء وتثبيت المشاريع."""
     try:
-        # استخدام Sandbox.create() لإنشاء الجلسة بشكل صحيح
-        with Sandbox.create(api_key=E2B_KEY) as sandbox:
-            proc = sandbox.commands.run(command)
-            out = (proc.stdout or "") + (proc.stderr or "")
-            return out if out else "تم تنفيذ الأمر بنجاح."
+        daytona = get_daytona_client()
+        sandbox = daytona.create()
+        response = sandbox.process.exec(command)
+        
+        if response.exit_code != 0:
+            return f"خطأ أثناء تنفيذ الأمر (Exit Code {response.exit_code}): {response.result}"
+        return response.result if response.result else "تم تنفيذ أمر Shell بنجاح."
     except Exception as e:
-        return f"حدث خطأ أثناء تنفيذ أمر Shell: {str(e)}"
+        return f"حدث خطأ أثناء تنفيذ الأمر: {str(e)}"
 
 if __name__ == "__main__":
     mcp.run(transport="sse")
