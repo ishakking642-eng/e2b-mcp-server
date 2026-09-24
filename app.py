@@ -5,7 +5,8 @@ from e2b_code_interpreter import Sandbox
 E2B_KEY = os.environ.get("E2B_API_KEY")
 PORT = int(os.environ.get("PORT", 10000))
 
-mcp = FastMCP("E2B Cloud Sandbox")
+# تمرير host و port هنا أثناء الإنشاء
+mcp = FastMCP("E2B Cloud Sandbox", host="0.0.0.0", port=PORT)
 
 @mcp.tool()
 def execute_python_code(code: str) -> str:
@@ -26,4 +27,5 @@ def execute_shell_command(command: str) -> str:
         return proc.stdout + proc.stderr
 
 if __name__ == "__main__":
-    mcp.run(transport="sse", host="0.0.0.0", port=PORT)
+    # استدعاء run وتحديد نمط sse فقط
+    mcp.run(transport="sse")
