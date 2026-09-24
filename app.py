@@ -1,4 +1,4 @@
-Enterimport os
+import os
 from mcp.server.fastmcp import FastMCP
 from e2b_code_interpreter import Sandbox
 
