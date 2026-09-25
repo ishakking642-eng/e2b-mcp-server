@@ -1,0 +1,36 @@
+name: guard-scan
+on:
+  schedule:
+    - cron: '*/20 * * * *'
+  workflow_dispatch:
+    inputs:
+      strict:
+        description: 'Enable auto-blocking (1) or dry-run (0)'
+        required: false
+        default: '0'
+permissions:
+  contents: write
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: run guard
+        env:
+          GUARD_SOURCES: ${{ secrets.GUARD_SOURCES }}
+          GUARD_STRICT: ${{ github.event.inputs.strict || '1' }}
+        run: python3 ops/guard/guard_job.py
+      - name: commit state
+        run: |
+          git config user.name ishak-guard
+          git config user.email guard@ishak.dev
+          git add ops/guard_data || true
+          if git diff --cached --quiet; then echo "no change"; else
+            git commit -m "guard state $({ date -u +%FT%TZ })"
+            git pull --rebase --quiet origin main || true
+            git push origin HEAD:main
+          fi
