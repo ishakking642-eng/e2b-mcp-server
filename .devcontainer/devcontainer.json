@@ -3,20 +3,11 @@
   "image": "mcr.microsoft.com/devcontainers/python:3.11",
   "postCreateCommand": "python3 -m pip install --no-cache-dir -r requirements.txt",
   "postStartCommand": "bash /workspaces/e2b-mcp-server/bootstrap.sh",
-  "forwardPorts": [
-    8000
-  ],
+  "forwardPorts": [8000, 10000],
   "portsAttributes": {
-    "8000": {
-      "visibility": "public",
-      "onAutoForward": "ignore",
-      "label": "MCP SSE"
-    }
+    "8000": {"visibility": "public", "onAutoForward": "ignore", "label": "Guard REST"},
+    "10000": {"visibility": "public", "onAutoForward": "ignore", "label": "MCP SSE"}
   },
   "remoteUser": "codespace",
-  "hostRequirements": {
-    "cpus": 2,
-    "memory": "8gb",
-    "storage": "32gb"
-  }
+  "hostRequirements": {"cpus": 2, "memory": "8gb", "storage": "32gb"}
 }
