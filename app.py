@@ -2,13 +2,16 @@ import os
 import httpx
 from mcp.server.fastmcp import FastMCP
 
-# إنشاء خادم MCP
+# 1. إنشاء خادم MCP
 mcp = FastMCP("Daytona Sandbox Manager")
 
-# البيانات الخاصة بك
-DAYTONA_API_KEY = "dtn_365790d2012d44b234ebce2874961b9c87a05239b978412c84409a2276b1e1f5"
-SANDBOX_ID = "b082dcc5-1d81-49c5-bodf-f87a0dbo0171"  # من شاشة Daytona[span_2](start_span)[span_2](end_span)
+# 2. البيانات الخاصة ببيئة Daytona
+# يُفضل ضبط هذه البيانات كـ Environment Variables داخل منصة Render
+DAYTONA_API_KEY = os.getenv("DAYTONA_API_KEY", "dtn_365790d2012d44b234ebce2874961b9c87a05239b978412c84409a2276b1e1f5")
+DAYTONA_API_URL = os.getenv("DAYTONA_API_URL", "https://app.daytona.io/api")
+SANDBOX_ID = os.getenv("SANDBOX_ID", "b082dcc5-1d81-49c5-bodf-f87a0dbo0171")
 
+# 3. أداة إيقاظ الـ Sandbox
 @mcp.tool()
 def wake_up_sandbox() -> str:
     """إيقاظ الـ Sandbox وتجهيز البيئة عند بدء المحادثة"""
@@ -16,10 +19,10 @@ def wake_up_sandbox() -> str:
         "Authorization": f"Bearer {DAYTONA_API_KEY}",
         "Content-Type": "application/json"
     }
-    url = f"https://app.daytona.io/api/workspace/{SANDBOX_ID}"
-
+    url = f"{DAYTONA_API_URL}/workspace/{SANDBOX_ID}"
+    
     try:
-        # فحص الحالة
+        # فحص حالة الـ Sandbox
         res = httpx.get(url, headers=headers)
         if res.status_code == 200:
             state = res.json().get("state")
@@ -30,8 +33,16 @@ def wake_up_sandbox() -> str:
             return "الـ Sandbox يعمل ونشط بالفعل."
         return f"تعذر الاتصال بـ Daytona: {res.status_code}"
     except Exception as e:
-        return f"حدث خطأ: {str(e)}"
+        return f"حدث خطأ أثناء الاتصال: {str(e)}"
 
+# 4. تشغيل الخادم مع إعدادات Render الصحيحة
 if __name__ == "__main__":
-    # تشغيل السيرفر على Port 8000
-    mcp.run(transport="sse", port=8000)
+    # استخراج رقم البورت المخصص تلقائياً من Render
+    port = int(os.environ.get("PORT", 8000))
+    
+    # ضبط الإعدادات المباشرة لخادم FastMCP
+    mcp.settings.host = "0.0.0.0"
+    mcp.settings.port = port
+    
+    # تشغيل الخدمة عبر بروتوكول SSE
+    mcp.run(transport="sse")
